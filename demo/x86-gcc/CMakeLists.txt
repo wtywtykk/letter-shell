@@ -1,16 +1,10 @@
-cmake_minimum_required(VERSION 3.0.0)
-project(LetterShell VERSION 0.1.0)
-
-add_definitions(-DSHELL_CFG_USER="shell_cfg_user.h")
+set(LETTER_SHELL_CFG_USER "${CMAKE_CURRENT_SOURCE_DIR}/shell_cfg_user.h")
+add_subdirectory(../.. ./shell)
 
 add_executable(LetterShell
                main.c
                shell_port.c
                shell_cpp.cpp
-               ../../src/shell.c
-               ../../src/shell_companion.c
-               ../../src/shell_ext.c
-               ../../src/shell_cmd_list.c
                ../../extensions/fs_support/shell_fs.c
                ../../extensions/log/log.c
                ../../extensions/telnet/telnetd.c
@@ -22,10 +16,11 @@ add_executable(LetterShell
                ../../extensions/game/pushbox/pushbox.c
                )
 
+target_link_libraries(LetterShell PRIVATE letter-shell)
+
 target_include_directories(LetterShell PUBLIC 
                            "${PROJECT_BINARY_DIR}"
                            ./
-                           ../../src
                            ../../extensions/fs_support
                            ../../extensions/cpp_support
                            ../../extensions/log

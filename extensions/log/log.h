@@ -45,7 +45,7 @@ extern "C" {
 #define     LOG_UNLOCK(log)
 #endif /* LOG_USING_LOCK == 1 */
 
-#define     LOG_ALL_OBJ        ((Log *)-1)      /**< 所有已注册的log对象 */
+#define     LOG_ALL_OBJ        ((ShellLog *)-1)      /**< 所有已注册的log对象 */
 
 /**
  * 终端字体颜色代码
@@ -118,7 +118,7 @@ typedef struct log_def
     int (*unlock)(struct log_def *);                /**< log 解锁 */
 #endif /** LOG_USING_LOCK == 1 */
     Shell *shell;                                   /**< 关联shell对象 */
-} Log;
+} ShellLog;
 
 
 
@@ -211,11 +211,11 @@ typedef struct log_def
 #define logHexDumpAll(base, length) \
         logHexDump(LOG_ALL_OBJ, LOG_ALL, base, length)
 
-void logRegister(Log *log, Shell *shell);
-void logUnRegister(Log *log);
-void logSetLevel(Log *log, LogLevel level);
-void logWrite(Log *log, LogLevel level, const char *fmt, ...);
-void logHexDump(Log *log, LogLevel level, void *base, unsigned int length);
+void logRegister(ShellLog *shellLog, Shell *shell);
+void logUnRegister(ShellLog *shellLog);
+void logSetLevel(ShellLog *shellLog, LogLevel level);
+void logWrite(ShellLog *shellLog, LogLevel level, const char *fmt, ...);
+void logHexDump(ShellLog *shellLog, LogLevel level, void *base, unsigned int length);
 
 #ifdef __cplusplus
 }

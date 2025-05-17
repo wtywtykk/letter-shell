@@ -28,7 +28,7 @@ Shell shell;
 char shellBuffer[512];
 ShellFs shellFs;
 char shellPathBuffer[512] = "/";
-Log log = {
+ShellLog shellLog = {
     .active = 1,
     .level = LOG_DEBUG
 };
@@ -54,9 +54,9 @@ unsigned int userGetTick()
  */
 void terminalLogWrite(char *buffer, short len)
 {
-    if (log.shell)
+    if (shellLog.shell)
     {
-        shellWriteEndLine(log.shell, buffer, len);
+        shellWriteEndLine(shellLog.shell, buffer, len);
     }
 }
 
@@ -167,8 +167,8 @@ void userShellInit(void)
     shellInit(&shell, shellBuffer, 512);
     shellCompanionAdd(&shell, SHELL_COMPANION_ID_FS, &shellFs);
 
-    log.write = terminalLogWrite;
-    logRegister(&log, &shell);
+    shellLog.write = terminalLogWrite;
+    logRegister(&shellLog, &shell);
 
     telentdInit(userNewThread);
 

@@ -12,19 +12,29 @@
 #include "stdio.h"
 #include "stdarg.h"
 #include "shell.h"
+#include <stdint.h>
+#include <inttypes.h>
 
-#if LOG_USING_COLOR == 1
-#define memPrintHead CSI(31) \
-    "    Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F" \
-    CSI(39) \
-    "\r\n"
-#define memPrintAddr CSI(31)"0x%08x: "CSI(39)
+#if UINTPTR_MAX == UINT32_MAX
+#define ptrHeadPad "    "
+#define ptrWidthFmt "08"
+#elif UINTPTR_MAX == UINT64_MAX
+#define ptrHeadPad "            "
+#define ptrWidthFmt "016"
 #else
-#define memPrintHead "    Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\r\n"
-#define memPrintAddr "0x%08x: "
+#error "Unsupported platform ptr width"
 #endif
 
-Log *logList[LOG_MAX_NUMBER] = {0};
+#if LOG_USING_COLOR == 1
+#define memPrintHead CSI(31) ptrHeadPad \
+    "Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F" CSI(39) "\r\n"
+#define memPrintAddr CSI(31) "0x%" ptrWidthFmt PRIxPTR ": " CSI(39)
+#else
+#define memPrintHead ptrHeadPad "Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\r\n"
+#define memPrintAddr "0x%" ptrWidthFmt PRIxPTR ": "
+#endif
+
+static ShellLog *logList[LOG_MAX_NUMBER] = {0};
 static char logBuffer[LOG_BUFFER_SIZE];
 
 #if LOG_USING_LOCK == 1
@@ -32,9 +42,9 @@ static char logBuffer[LOG_BUFFER_SIZE];
  * @brief   上锁log对象
  * @param   log log对象
  */
-static void logLock(Log *log)
+static void logLock(ShellLog *shellLog)
 {
-    if (log == LOG_ALL_OBJ)
+    if (shellLog == LOG_ALL_OBJ)
     {
         for (short i = 0; i < LOG_MAX_NUMBER; i++)
         {
@@ -47,9 +57,9 @@ static void logLock(Log *log)
             }
         }
     }
-    else if (log->lock)
+    else if (shellLog->lock)
     {
-        LOG_LOCK(log);
+        LOG_LOCK(shellLog);
     }
 }
 
@@ -57,9 +67,9 @@ static void logLock(Log *log)
  * @brief   解锁log对象
  * @param   log log对象
  */
-static void logUnlock(Log *log)
+static void logUnlock(ShellLog *shellLog)
 {
-    if (log == LOG_ALL_OBJ)
+    if (shellLog == LOG_ALL_OBJ)
     {
         for (short i = 0; i < LOG_MAX_NUMBER; i++)
         {
@@ -72,9 +82,9 @@ static void logUnlock(Log *log)
             }
         }
     }
-    else if (log->unlock)
+    else if (shellLog->unlock)
     {
-        LOG_UNLOCK(log);
+        LOG_UNLOCK(shellLog);
     }
 }
 #endif /* LOG_USING_LOCK == 1 */
@@ -84,20 +94,20 @@ static void logUnlock(Log *log)
  * 
  * @param log log对象
  */
-void logRegister(Log *log, Shell *shell)
+void logRegister(ShellLog *shellLog, Shell *shell)
 {
     if (shell)
     {
-        log->shell = shell;
-    #if SHELL_USING_COMPANION == 1
-        shellCompanionAdd(shell, SHELL_COMPANION_ID_LOG, log);
-    #endif
+        shellLog->shell = shell;
+#if SHELL_USING_COMPANION == 1
+        shellCompanionAdd(shell, SHELL_COMPANION_ID_LOG, shellLog);
+#endif
     }
     for (short i = 0; i < LOG_MAX_NUMBER; i++)
     {
         if (logList[i] == 0)
         {
-            logList[i] = log;
+            logList[i] = shellLog;
             return;
         }
     }
@@ -109,11 +119,11 @@ void logRegister(Log *log, Shell *shell)
  * 
  * @param log log对象
  */
-void logUnRegister(Log *log)
+void logUnRegister(ShellLog *shellLog)
 {
     for (short i = 0; i < LOG_MAX_NUMBER; i++)
     {
-        if (logList[i] == log)
+        if (logList[i] == shellLog)
         {
             logList[i] = 0;
             return;
@@ -128,10 +138,10 @@ void logUnRegister(Log *log)
  * @param log log对象
  * @param level 日志级别
  */
-void logSetLevel(Log *log, LogLevel level)
+void logSetLevel(ShellLog *shellLog, LogLevel level)
 {
-    logAssert(log, return);
-    log->level = level;
+    logAssert(shellLog, return);
+    shellLog->level = level;
 }
 #if SHELL_USING_COMPANION == 1
 SHELL_EXPORT_CMD_AGENCY(
@@ -152,12 +162,12 @@ logSetLevel, logSetLevel, set log level\r\n logSetLevel [log] [level]);
  * @param buffer buffer
  * @param len buffer长度
  */
-static void logWriteBuffer(Log *log, LogLevel level, char *buffer, short len)
+static void logWriteBuffer(ShellLog *shellLog, LogLevel level, char *buffer, short len)
 {
 #if LOG_USING_LOCK == 1
-    logLock(log);
+    logLock(shellLog);
 #endif /* LOG_USING_LOCK == 1 */
-    if (log == LOG_ALL_OBJ)
+    if (shellLog == LOG_ALL_OBJ)
     {
         for (short i = 0; i < LOG_MAX_NUMBER; i++)
         {
@@ -169,12 +179,12 @@ static void logWriteBuffer(Log *log, LogLevel level, char *buffer, short len)
             }
         }
     }
-    else if (log && log->active && log->level >= level)
+    else if (shellLog && shellLog->active && shellLog->level >= level)
     {
-        log->write(logBuffer, len);
+        shellLog->write(logBuffer, len);
     }
 #if LOG_USING_LOCK == 1
-    logUnlock(log);
+    logUnlock(shellLog);
 #endif /* LOG_USING_LOCK == 1 */
 }
 
@@ -186,13 +196,13 @@ static void logWriteBuffer(Log *log, LogLevel level, char *buffer, short len)
  * @param fmt 格式
  * @param ... 参数
  */
-void logWrite(Log *log, LogLevel level, const char *fmt, ...)
+void logWrite(ShellLog *shellLog, LogLevel level, const char *fmt, ...)
 {
     va_list vargs;
     int len;
     
 #if LOG_USING_LOCK == 1
-    logLock(log);
+    logLock(shellLog);
 #endif /* LOG_USING_LOCK == 1 */
     va_start(vargs, fmt);
     len = vsnprintf(logBuffer, LOG_BUFFER_SIZE - 1, fmt, vargs);
@@ -203,9 +213,9 @@ void logWrite(Log *log, LogLevel level, const char *fmt, ...)
         len = LOG_BUFFER_SIZE;
     }
 
-    logWriteBuffer(log, level, logBuffer, len);
+    logWriteBuffer(shellLog, level, logBuffer, len);
 #if LOG_USING_LOCK == 1
-    logUnlock(log);
+    logUnlock(shellLog);
 #endif /* LOG_USING_LOCK == 1 */
 }
 
@@ -217,36 +227,36 @@ void logWrite(Log *log, LogLevel level, const char *fmt, ...)
  * @param base 内存基址
  * @param length 长度
  */
-void logHexDump(Log *log, LogLevel level, void *base, unsigned int length)
+void logHexDump(ShellLog *shellLog, LogLevel level, void *base, unsigned int length)
 {
     unsigned char *address;
     unsigned int len;
     unsigned int printLen = 0;
 
-    if (length == 0 || (log != LOG_ALL_OBJ && log->level < level))
+    if (length == 0 || (shellLog != LOG_ALL_OBJ && shellLog->level < level))
     {
         return;
     }
 #if LOG_USING_LOCK == 1
-    logLock(log);
+    logLock(shellLog);
 #endif /* LOG_USING_LOCK == 1 */
-    len = snprintf(logBuffer, LOG_BUFFER_SIZE - 1, "memory of 0x%08x, size: %d:\r\n%s",
-                   (unsigned int)base, length, memPrintHead);
-    logWriteBuffer(log, level, logBuffer, len);
+    len = snprintf(logBuffer, LOG_BUFFER_SIZE - 1, "memory of 0x%" ptrWidthFmt PRIxPTR", size: %d:\r\n%s",
+                   base, length, memPrintHead);
+    logWriteBuffer(shellLog, level, logBuffer, len);
 
     len = length;
-    
-    address = (unsigned char *)((unsigned int)base & (~0x0000000F));
-    length += (unsigned int)base - (unsigned int)address;
+
+    address = (unsigned char *)((uintptr_t)base & (~0x0000000F));
+    length += (unsigned char *)base - address;
     length = (length + 15) & (~0x0000000F);
 
     while (length)
     {
-        printLen += sprintf(logBuffer + printLen, memPrintAddr, (unsigned int)address);
+        printLen += sprintf(logBuffer + printLen, memPrintAddr, address);
         for (int i = 0; i < 16; i++)
         {
-            if ((unsigned int)(address + i) < (unsigned int)base
-                || (unsigned int)(address + i) >= (unsigned int)base + len)
+            if (address + i < (unsigned char *)base
+                || address + i >= (unsigned char *)base + len)
             {
                 logBuffer[printLen ++] = ' ';
                 logBuffer[printLen ++] = ' ';
@@ -261,8 +271,8 @@ void logHexDump(Log *log, LogLevel level, void *base, unsigned int length)
         logBuffer[printLen ++] = ' ';
         for (int i = 0; i < 16; i++)
         {
-            if ((unsigned int)(address + i) < (unsigned int)base
-                || (unsigned int)(address + i) >= (unsigned int)base + len)
+            if (address + i < (unsigned char *)base
+                || address + i >= (unsigned char *)base + len)
             {
                 logBuffer[printLen ++] = ' ';
             }
@@ -282,13 +292,13 @@ void logHexDump(Log *log, LogLevel level, void *base, unsigned int length)
         logBuffer[printLen ++] = '|';
         logBuffer[printLen ++] = '\r';
         logBuffer[printLen ++] = '\n';
-        logWriteBuffer(log, level, logBuffer, printLen);
+        logWriteBuffer(shellLog, level, logBuffer, printLen);
         address += 16;
         length -= 16;
         printLen = 0;
     }
 #if LOG_USING_LOCK == 1
-    logUnlock(log);
+    logUnlock(shellLog);
 #endif /* LOG_USING_LOCK == 1 */
 }
 #if SHELL_USING_COMPANION == 1
@@ -305,10 +315,10 @@ hexdump, logHexDump, hex dump\r\n hexdump [log] [level] [base] [len]);
 #if SHELL_USING_COMPANION == 1
 void logSwitchLevel(Shell *shell)
 {
-    Log *log = shellCompanionGet(shell, SHELL_COMPANION_ID_LOG);
-    SHELL_ASSERT(log, return);
-    log->level = (LogLevel)(log->level >= LOG_ALL ? LOG_NONE : (log->level + 1));
-    logPrintln("set log level: %d", log->level);
+    ShellLog *shellLog = shellCompanionGet(shell, SHELL_COMPANION_ID_LOG);
+    SHELL_ASSERT(shellLog, return);
+    shellLog->level = (LogLevel)(shellLog->level >= LOG_ALL ? LOG_NONE : (shellLog->level + 1));
+    logPrintln("set log level: %d", shellLog->level);
 }
 SHELL_EXPORT_KEY(SHELL_CMD_PERMISSION(0), 0x04000000, logSwitchLevel, switch log level);
 #endif /** SHELL_USING_COMPANION == 1 */

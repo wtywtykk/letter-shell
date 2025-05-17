@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "shell.h"
 
 #define printf(...) shellPrint(shell2048, ##__VA_ARGS__)

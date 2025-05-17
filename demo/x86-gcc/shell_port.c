@@ -65,7 +65,7 @@ void terminalLogWrite(char *buffer, short len)
  * 
  * @param data 数据
  */
-unsigned short userShellWrite(char *data, unsigned short len)
+signed short userShellWrite(char *data, unsigned short len)
 {
     unsigned short length = len;
     while (length--)
@@ -81,7 +81,7 @@ unsigned short userShellWrite(char *data, unsigned short len)
  * @param data 数据
  * @return char 状态
  */
-unsigned short userShellRead(char *data, unsigned short len)
+signed short userShellRead(char *data, unsigned short len)
 {
     unsigned short length = len;
     while (length--)
@@ -249,7 +249,7 @@ SHELL_CMD_PERMISSION(0x00)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE
 scanTest, shellScanTest, test scan);
 
 
-void shellPassthroughTest(char *data, unsigned short len)
+int shellPassthroughTest(char *data, unsigned short len)
 {
     printf("passthrough mode test, data: %s, len: %d\r\n", data, len);
 }

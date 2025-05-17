@@ -17,6 +17,9 @@
 #include "shell.h"
 #include "shell_cmd_group.h"
 
+#include <memory.h>
+#include <unistd.h>
+
 #if SHELL_USING_COMPANION != 1
 #error telent for letter shell can not be used while shell companion is diabled
 #endif
@@ -43,7 +46,7 @@ static int telnetdPort = TELNETD_DEFAULT_SERVER_PORT;
 
 static void telnetdServer(void);
 static void telnetdConnection(int client);
-static void telentdWrite(char *data, short len);
+static signed short telentdWrite(char *data, unsigned short len);
 
 /**
  * @brief telnet 协议命令
@@ -186,13 +189,14 @@ static void telnetdConnection(int client)
  * @param len 数据长度
  * 
  */
-static void telentdWrite(char *data, short len)
+static signed short telentdWrite(char *data, unsigned short len)
 {
     int client = (int) shellCompanionGet(telnetdShell, SHELL_COMPANION_ID_TELNETD);
     if (client != 0)
     {
-        send(client, data, len, 0);
+        return send(client, data, len, 0);
     }
+    return -1;
 }
 
 

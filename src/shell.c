@@ -9,7 +9,6 @@
  */
 
 #include "shell.h"
-#include "shell_cfg.h"
 #include "string.h"
 #include "stdio.h"
 #include "stdarg.h"

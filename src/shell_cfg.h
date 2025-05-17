@@ -12,10 +12,6 @@
 #ifndef __SHELL_CFG_H__
 #define __SHELL_CFG_H__
 
-#ifdef SHELL_CFG_USER
-#include SHELL_CFG_USER
-#endif
-
 #ifndef SHELL_TASK_WHILE
 /**
  * @brief 是否使用默认shell任务while循环

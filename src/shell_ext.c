@@ -9,7 +9,6 @@
  * 
  */
 
-#include "shell_cfg.h"
 #include "shell.h"
 #include "shell_ext.h"
 #include "string.h"

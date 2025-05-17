@@ -12,7 +12,12 @@
 #ifndef     __SHELL_H__
 #define     __SHELL_H__
 
+#ifdef SHELL_CFG_USER
+#include SHELL_CFG_USER
+#endif
 #include "shell_cfg.h"
+
+#include <stdint.h>
 
 #define     SHELL_VERSION               "3.2.4"                 /**< 版本号 */
 

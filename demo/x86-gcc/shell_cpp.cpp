@@ -16,5 +16,5 @@ void cppTest(void)
     Shell *shell = shellGetCurrent();
     shellPrint(shell, "hello world from cpp\r\n");
 }
-SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC),
+SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD),
 cppTest, cppTest, cpp test);

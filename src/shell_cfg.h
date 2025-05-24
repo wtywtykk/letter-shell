@@ -242,20 +242,11 @@
 #define     SHELL_LOCK_TIMEOUT          0 * 60 * 1000
 #endif /** SHELL_LOCK_TIMEOUT */
 
-#ifndef SHELL_USING_FUNC_SIGNATURE
-/**
- * @brief 使用函数签名
- *        使能后，可以在声明命令时，指定函数的签名，shell 会根据函数签名进行参数转换，
- *        而不是自动判断参数的类型，如果参数和函数签名不匹配，会停止执行命令
- */
-#define     SHELL_USING_FUNC_SIGNATURE  0
-#endif /** SHELL_USING_FUNC_SIGNATURE */
-
 #ifndef SHELL_SUPPORT_ARRAY_PARAM
 /**
  * @brief 支持数组参数
  *        使能后，可以在命令中使用数组参数，如`cmd [1,2,3]`
- *        需要使能 `SHELL_USING_FUNC_SIGNATURE` 宏，并且配置 `SHELL_MALLOC`, `SHELL_FREE`
+ *        需要配置 `SHELL_MALLOC`, `SHELL_FREE`
  */
 #define     SHELL_SUPPORT_ARRAY_PARAM   0
 #endif /** SHELL_SUPPORT_ARRAY_PARAM */

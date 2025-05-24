@@ -78,11 +78,14 @@ SECTIONS
   .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
   .rodata1        : { *(.rodata1) }
   . = ALIGN(32);
-  .shell_command ALIGN(4) :
+  .letter_shell ALIGN(4) :
   {
     _shell_command_start = .;
     KEEP (*(shellCommand))
     _shell_command_end = .;
+    _shell_user_start = .;
+    KEEP (*(shellUser))
+    _shell_user_end = .;
   }
   .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
   .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) *(.eh_frame.*) }

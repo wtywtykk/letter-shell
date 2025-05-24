@@ -41,7 +41,7 @@ typedef int (*ShellPassthrough)(char *data, unsigned short len);
  * @param _handler passthrough 模式 handler
  */
 #define SHELL_PASSTROUGH_FUNC(_name, _prompt, _handler) \
-        void SHELL_PASSTROUGH_FUNC_NAME(_name)(int p1, int p2) \
+        void SHELL_PASSTROUGH_FUNC_NAME(_name)(uintptr_t p1, uintptr_t p2) \
         { shellPassthrough(shellGetCurrent(), #_prompt, _handler, p1, (void *)p2); }
 
 /**

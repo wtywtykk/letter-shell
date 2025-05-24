@@ -54,7 +54,6 @@
             ##__VA_ARGS__ \
         }
 
-#if SHELL_USING_FUNC_SIGNATURE == 1
     /**
     * @brief shell 命令组item定义
     * 
@@ -71,7 +70,6 @@
             .data.cmd.desc = #_desc, \
             .data.cmd.signature = #_sign, \
             }
-#endif
 
 /**
  * @brief shell 命令组定义结尾

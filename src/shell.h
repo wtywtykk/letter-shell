@@ -18,9 +18,32 @@
 #include "shell_cfg.h"
 
 #include <stdint.h>
+#include <limits.h>
 
 #define     SHELL_VERSION               "3.2.4"                 /**< 版本号 */
 
+#if UINTPTR_MAX == UINT8_MAX
+#define SHELL_PLAT_BITS 8
+#elif UINTPTR_MAX == UINT16_MAX
+#define SHELL_PLAT_BITS 16
+#elif UINTPTR_MAX == UINT32_MAX
+#define SHELL_PLAT_BITS 32
+#elif UINTPTR_MAX == UINT64_MAX
+#define SHELL_PLAT_BITS 64
+#else
+#error "Unsupported platform width"
+#endif
+
+#if INT_MAX == INT8_MAX
+#define SHELL_INT_BITS 8
+#elif INT_MAX == INT16_MAX
+#define SHELL_INT_BITS 16
+#elif INT_MAX == INT32_MAX
+#define SHELL_INT_BITS 32
+#elif INT_MAX == INT64_MAX
+#define SHELL_INT_BITS 64
+#error "Unsupported int width"
+#endif
 
 /**
  * @brief shell 断言
@@ -80,6 +103,8 @@
 #define     SHELL_CMD_PARAM_NUM(num) \
             ((num & 0x0000000F)) << 16
 
+#if SHELL_USING_CMD_EXPORT == 1
+
 #ifndef SHELL_SECTION
     #if defined(__CC_ARM) || defined(__CLANG_ARM)
         #define SHELL_SECTION(x)                __attribute__((section(x), aligned(1)))
@@ -90,6 +115,14 @@
     #else
         #define SHELL_SECTION(x)
     #endif
+#endif
+
+#else
+
+#ifdef SHELL_SECTION
+#error "SHELL_SECTION is used only when using SHELL_USING_CMD_EXPORT"
+#endif
+
 #endif
 
 #ifndef SHELL_USED
@@ -104,89 +137,165 @@
     #endif
 #endif
 
-/**
- * @brief shell float型参数转换
- */
-#define     SHELL_PARAM_FLOAT(x)            (*(float *)(&x))
+typedef struct shell_def *pShell;
+typedef struct shell_command *pCommand;
+typedef struct shell_user *pUser;
+
+typedef int (*shellCompleteCb)(pShell shell, int argc, char *argv[]);
+typedef int (*shellMainStyleCb)(int argc, char *argv[]);
+
+#define SHELL_VA_COUNTING_IMPL(                            \
+    _invalid, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, \
+    _11, _12, _13, _14, _15, _16, _17, _18, _19, _20,      \
+    _21, _22, _23, _24, _25, _26, _27, _28, _29, _30,      \
+    _31, _32, _33, _34, _35, _36, _37, _38, _39, _40,      \
+    _41, _42, _43, _44, _45, _46, _47, _48, _49, _50,      \
+    _51, _52, _53, _54, _55, _56, _57, _58, _59, _60,      \
+    _61, _62, N, ...) N
 
 /**
- * @brief shell 代理函数名
+ * @brief 返回宏定义的参数数量
  */
-#define     SHELL_AGENCY_FUNC_NAME(_func)   agency##_func
+#define SHELL_VA_COUNTING(...) SHELL_VA_COUNTING_IMPL(_invalid, ##__VA_ARGS__, 63, 62, 61,    \
+                                                      60, 59, 58, 57, 56, 55, 54, 53, 52, 51, \
+                                                      50, 49, 48, 47, 46, 45, 44, 43, 42, 41, \
+                                                      40, 39, 38, 37, 36, 35, 34, 33, 32, 31, \
+                                                      30, 29, 28, 27, 26, 25, 24, 23, 22, 21, \
+                                                      20, 19, 18, 17, 16, 15, 14, 13, 12, 11, \
+                                                      10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+
+#define SHELL_CONCAT_2_IMPL(p1, p2) p1##p2
 
 /**
- * @brief shell代理函数定义
- * 
- * @param _func 被代理的函数
- * @param ... 代理参数
+ * @brief 连接token
  */
-#define SHELL_AGENCY_FUNC(_func, ...)                                                                                                    \
-    void SHELL_AGENCY_FUNC_NAME(_func)(uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5, uintptr_t p6, uintptr_t p7) \
-    {                                                                                                                                    \
-        _func(__VA_ARGS__);                                                                                                              \
-    }
+#define SHELL_CONCAT_2(p1, p2) SHELL_CONCAT_2_IMPL(p1, p2)
 
-#if SHELL_USING_CMD_EXPORT == 1
+/**
+ * @brief shell 全功能命令定义
+ *
+ * @param _attr 命令属性
+ * @param _name 命令名
+ * @param _func 命令函数
+ * @param _desc 命令描述
+ * @param ... 其他参数
+ */
+#define SHELL_EXPORT_COMPLETE_CMD(_attr, _name, _func, _desc, ...) \
+    static const char shellCmd##_name[] = #_name;                  \
+    static const char shellDesc##_name[] = _desc;                  \
+    SHELL_USED const ShellCommand                                  \
+        shellCommand##_name SHELL_SECTION("shellCommand") =        \
+            {                                                      \
+                .attr.value = _attr,                               \
+                .data.cmd.name = shellCmd##_name,                  \
+                .data.cmd.function = _func,                        \
+                .data.cmd.desc = shellDesc##_name,                 \
+                ##__VA_ARGS__}
 
-    /**
-     * @brief shell 命令定义
-     * 
-     * @param _attr 命令属性
-     * @param _name 命令名
-     * @param _func 命令函数
-     * @param _desc 命令描述
-     * @param ... 其他参数
-     */
-    #define SHELL_EXPORT_CMD(_attr, _name, _func, _desc, ...) \
-            const char shellCmd##_name[] = #_name; \
-            const char shellDesc##_name[] = #_desc; \
-            SHELL_USED const ShellCommand \
-            shellCommand##_name SHELL_SECTION("shellCommand") =  \
-            { \
-                .attr.value = _attr, \
-                .data.cmd.name = shellCmd##_name, \
-                .data.cmd.function = (int (*)())_func, \
-                .data.cmd.desc = shellDesc##_name, \
-                ##__VA_ARGS__ \
-            }
+/**
+ * @brief 命令的参数解析函数名
+ */
+#define SHELL_PARSER_FUNC_NAME(_func) SHELL_CONCAT_2(parser_, _func)
 
-#if SHELL_USING_FUNC_SIGNATURE == 1
-    /**
-     * @brief shell 命令定义
-     * 
-     * @param _attr 命令属性
-     * @param _name 命令名
-     * @param _func 命令函数
-     * @param _desc 命令描述
-     * @param _sign 命令签名
-     */
-    #define SHELL_EXPORT_CMD_SIGN(_attr, _name, _func, _desc, _sign) \
-            const char shellCmd##_name[] = #_name; \
-            const char shellDesc##_name[] = #_desc; \
-            const char shellSign##_name[] = #_sign; \
-            SHELL_USED const ShellCommand \
-            shellCommand##_name SHELL_SECTION("shellCommand") =  \
-            { \
-                .attr.value = _attr, \
-                .data.cmd.name = shellCmd##_name, \
-                .data.cmd.function = (int (*)())_func, \
-                .data.cmd.desc = shellDesc##_name, \
-                .data.cmd.signature = shellSign##_name \
-            }
-#endif /** SHELL_USING_FUNC_SIGNATURE == 1 */
+/**
+ * @brief shell main风格命令定义
+ *
+ * @param _attr 命令属性
+ * @param _name 命令名
+ * @param _func 命令函数
+ * @param _desc 命令描述
+ * @param ... 其他参数
+ */
+#define SHELL_EXPORT_CMD(_attr, _name, _func, _desc, ...)                   \
+    int SHELL_PARSER_FUNC_NAME(_func)(pShell shell, int argc, char *argv[]) \
+    {                                                                       \
+        (void)shell;                                                        \
+        return _func(argc, argv);                                           \
+    }                                                                       \
+    SHELL_EXPORT_COMPLETE_CMD(_attr, _name, SHELL_PARSER_FUNC_NAME(_func), _desc, ##__VA_ARGS__);
 
-    /**
-     * @brief shell 代理命令定义
-     * 
-     * @param _attr 命令属性
-     * @param _name 命令名
-     * @param _func 命令函数
-     * @param _desc 命令描述
-     * @param ... 代理参数
-     */
-    #define SHELL_EXPORT_CMD_AGENCY(_attr, _name, _func, _desc, ...) \
-            SHELL_AGENCY_FUNC(_func, ##__VA_ARGS__) \
-            SHELL_EXPORT_CMD(_attr, _name, SHELL_AGENCY_FUNC_NAME(_func), _desc)
+#define SHELL_PARSE_ARG_INIT_ITEM(N, T) \
+    SHELL_CONCAT_2(shellArgType_, T)    \
+    p##N;                               \
+    ret |= SHELL_CONCAT_2(shellArgParse_, T)(&argc, &argv, &p##N)
+
+#define SHELL_PARSER_ARG_INIT_EXPAND_0()
+#define SHELL_PARSER_ARG_INIT_EXPAND_1(T0) \
+    SHELL_PARSER_ARG_INIT_EXPAND_0();      \
+    SHELL_PARSE_ARG_INIT_ITEM(0, T0)
+#define SHELL_PARSER_ARG_INIT_EXPAND_2(T0, T1) \
+    SHELL_PARSER_ARG_INIT_EXPAND_1(T0);        \
+    SHELL_PARSE_ARG_INIT_ITEM(1, T1)
+#define SHELL_PARSER_ARG_INIT_EXPAND_3(T0, T1, T2) \
+    SHELL_PARSER_ARG_INIT_EXPAND_2(T0, T1);        \
+    SHELL_PARSE_ARG_INIT_ITEM(2, T2)
+#define SHELL_PARSER_ARG_INIT_EXPAND_4(T0, T1, T2, T3) \
+    SHELL_PARSER_ARG_INIT_EXPAND_3(T0, T1, T2);        \
+    SHELL_PARSE_ARG_INIT_ITEM(3, T3)
+#define SHELL_PARSER_ARG_INIT_EXPAND_5(T0, T1, T2, T3, T4) \
+    SHELL_PARSER_ARG_INIT_EXPAND_4(T0, T1, T2, T3);        \
+    SHELL_PARSE_ARG_INIT_ITEM(4, T4)
+#define SHELL_PARSER_ARG_INIT_EXPAND_6(T0, T1, T2, T3, T4, T5) \
+    SHELL_PARSER_ARG_INIT_EXPAND_5(T0, T1, T2, T3);            \
+    SHELL_PARSE_ARG_INIT_ITEM(5, T5)
+#define SHELL_PARSER_ARG_INIT_EXPAND_7(T0, T1, T2, T3, T4, T5) \
+    SHELL_PARSER_ARG_INIT_EXPAND_6(T0, T1, T2, T3);            \
+    SHELL_PARSE_ARG_INIT_ITEM(6, T5)
+#define SHELL_PARSER_ARG_INIT_EXPAND_8(T0, T1, T2, T3, T4, T5) \
+    SHELL_PARSER_ARG_INIT_EXPAND_7(T0, T1, T2, T3);            \
+    SHELL_PARSE_ARG_INIT_ITEM(7, T5)
+
+#define SHELL_PARSER_ARG_INIT_EXPAND_X(N, ...) SHELL_CONCAT_2(SHELL_PARSER_ARG_INIT_EXPAND_, N)(__VA_ARGS__)
+
+#define SHELL_PARSER_ARG_INIT_EXPAND(...) SHELL_PARSER_ARG_INIT_EXPAND_X(SHELL_VA_COUNTING(__VA_ARGS__), ##__VA_ARGS__)
+
+#define SHELL_PARSER_ARG_CALL_EXPAND_0
+#define SHELL_PARSER_ARG_CALL_EXPAND_1  p0
+#define SHELL_PARSER_ARG_CALL_EXPAND_2  p0, p1
+#define SHELL_PARSER_ARG_CALL_EXPAND_3  p0, p1, p2
+#define SHELL_PARSER_ARG_CALL_EXPAND_4  p0, p1, p2, p3
+#define SHELL_PARSER_ARG_CALL_EXPAND_5  p0, p1, p2, p3, p4
+#define SHELL_PARSER_ARG_CALL_EXPAND_6  p0, p1, p2, p3, p4, p5
+#define SHELL_PARSER_ARG_CALL_EXPAND_7  p0, p1, p2, p3, p4, p5, p6
+#define SHELL_PARSER_ARG_CALL_EXPAND_8  p0, p1, p2, p3, p4, p5, p6, p7
+
+#define SHELL_PARSER_ARG_CALL_EXPAND_X(N, ...) SHELL_CONCAT_2(SHELL_PARSER_ARG_CALL_EXPAND_, N)
+
+#define SHELL_PARSER_ARG_CALL_EXPAND(...) SHELL_PARSER_ARG_CALL_EXPAND_X(SHELL_VA_COUNTING(__VA_ARGS__), ##__VA_ARGS__)
+
+#define SHELL_PARSER_RET_ASSIGN_int ret = 
+#define SHELL_PARSER_RET_ASSIGN_void ret = 0;
+#define SHELL_PARSER_RET_ASSIGN_T(T) SHELL_PARSER_RET_ASSIGN_ ## T
+
+/**
+ * @brief shell 带签名命令定义
+ *
+ * @param _attr 命令属性
+ * @param _name 命令名
+ * @param _func 命令函数
+ * @param _desc 命令描述
+ * @param _ret  命令函数返回值类型。仅限int或void。需严格保证名字相同。不允许typedef。
+ * @param ...   命令签名， 需为ShellParamType中的选项。需严格保证名字相同。不允许typedef或数值替换。
+ */
+#define SHELL_EXPORT_CMD_SIGN(_attr, _name, _func, _desc, _ret, ...)        \
+    int SHELL_PARSER_FUNC_NAME(_func)(pShell shell, int argc, char *argv[]) \
+    {                                                                       \
+        int ret = 0;                                                        \
+        if (argc < 1)                                                       \
+            return -1;                                                      \
+        argc--;                                                             \
+        argv++;                                                             \
+        SHELL_PARSER_ARG_INIT_EXPAND(__VA_ARGS__);                          \
+        if (ret)                                                            \
+        {                                                                   \
+            shellWriteParamErrMessage(shell, ret);                          \
+            return ret;                                                     \
+        }                                                                   \
+        SHELL_PARSER_RET_ASSIGN_T(_ret)                                     \
+        _func(SHELL_PARSER_ARG_CALL_EXPAND(__VA_ARGS__));                   \
+        return ret;                                                         \
+    }                                                                       \
+    SHELL_EXPORT_COMPLETE_CMD(_attr, _name, SHELL_PARSER_FUNC_NAME(_func), _desc);
 
     /**
      * @brief shell 变量定义
@@ -198,7 +307,7 @@
      */
     #define SHELL_EXPORT_VAR(_attr, _name, _value, _desc) \
             const char shellCmd##_name[] = #_name; \
-            const char shellDesc##_name[] = #_desc; \
+            const char shellDesc##_name[] = _desc; \
             SHELL_USED const ShellCommand \
             shellVar##_name SHELL_SECTION("shellCommand") =  \
             { \
@@ -244,159 +353,45 @@
             { \
                 .attr.value = _attr|SHELL_CMD_TYPE(SHELL_TYPE_KEY), \
                 .data.key.value = _value, \
-                .data.key.function = (void (*)(Shell *))_func, \
+                .data.key.function = _func, \
                 .data.key.desc = shellDesc##_value \
             }
 
-    /**
-     * @brief shell 代理按键定义
-     * 
-     * @param _attr 按键属性
-     * @param _value 按键键值
-     * @param _func 按键函数
-     * @param _desc 按键描述
-     * @param ... 代理参数
-     */
-    #define SHELL_EXPORT_KEY_AGENCY(_attr, _value, _func, _desc, ...) \
-            SHELL_AGENCY_FUNC(_func, ##__VA_ARGS__) \
-            SHELL_EXPORT_KEY(_attr, _value, SHELL_AGENCY_FUNC_NAME(_func), _desc)
+/**
+ * @brief shell 按键代理函数名
+ */
+#define SHELL_KEY_AGENCY_FUNC_NAME(_func) SHELL_CONCAT_2(key_agency_, _func)
 
-#if SHELL_USING_FUNC_SIGNATURE == 1
-    /**
-     * @brief shell 参数解析器定义
-     * 
-     * @param _attr 参数解析器属性
-     * @param _type 参数解析器类型
-     * @param _parser 参数解析器函数
-     * @param _cleaner 参数清理器
-     */
-    #define SHELL_EXPORT_PARAM_PARSER(_attr, _type, _parser, _cleaner) \
-            const char shellDesc##_parser[] = #_type; \
-            SHELL_USED const ShellCommand \
-            shellCommand##_parser SHELL_SECTION("shellCommand") = \
-            { \
-                .attr.value = _attr|SHELL_CMD_TYPE(SHELL_TYPE_PARAM_PARSER), \
-                .data.paramParser.type = shellDesc##_parser, \
-                .data.paramParser.parser = (int (*)(char *, void **))_parser, \
-                .data.paramParser.cleaner = (int (*)(void *))_cleaner \
-            }
-#endif
-
-#else
-    /**
-     * @brief shell 命令item定义
-     * 
-     * @param _attr 命令属性
-     * @param _name 命令名
-     * @param _func 命令函数
-     * @param _desc 命令描述
-     */
-    #define SHELL_CMD_ITEM(_attr, _name, _func, _desc) \
-            { \
-                .attr.value = _attr, \
-                .data.cmd.name = #_name, \
-                .data.cmd.function = (int (*)())_func, \
-                .data.cmd.desc = #_desc \
-            }
-
-    /**
-     * @brief shell 变量item定义
-     * 
-     * @param _attr 变量属性
-     * @param _name 变量名
-     * @param _value 变量值
-     * @param _desc 变量描述
-     */
-    #define SHELL_VAR_ITEM(_attr, _name, _value, _desc) \
-            { \
-                .attr.value = _attr, \
-                .data.var.name = #_name, \
-                .data.var.value = (void *)_value, \
-                .data.var.desc = #_desc \
-            }
-
-    /**
-     * @brief shell 用户item定义
-     * 
-     * @param _attr 用户属性
-     * @param _name 用户名
-     * @param _password 用户密码
-     * @param _desc 用户描述
-     */
-    #define SHELL_USER_ITEM(_attr, _name, _password, _desc) \
-            { \
-                .attr.value = _attr|SHELL_CMD_TYPE(SHELL_TYPE_USER), \
-                .data.user.name = #_name, \
-                .data.user.password = #_password, \
-                .data.user.desc = #_desc \
-            }
-
-    /**
-     * @brief shell 按键item定义
-     * 
-     * @param _attr 按键属性
-     * @param _value 按键键值
-     * @param _func 按键函数
-     * @param _desc 按键描述
-     */
-    #define SHELL_KEY_ITEM(_attr, _value, _func, _desc) \
-            { \
-                .attr.value = _attr|SHELL_CMD_TYPE(SHELL_TYPE_KEY), \
-                .data.key.value = _value, \
-                .data.key.function = (void (*)(Shell *))_func, \
-                .data.key.desc = #_desc \
-            }
-
-#if SHELL_USING_FUNC_SIGNATURE == 1
-    /**
-     * @brief shell 参数解析器item定义
-     * 
-     * @param _attr 参数解析器属性
-     * @param _type 参数解析器类型
-     * @param _parser 参数解析器函数
-     * @param _cleaner 参数清理器
-     */
-    #define SHELL_PARAM_PARSER_ITEM(_attr, _type, _parser, _cleaner) \
-            { \
-                .attr.value = _attr|SHELL_CMD_TYPE(SHELL_TYPE_PARAM_PARSER), \
-                .data.paramParser.type = #_type, \
-                .data.paramParser.parser = (int (*)(char *, void **))_parser, \
-                .data.paramParser.cleaner = (int (*)(void *))_cleaner \
-            }
-#endif /** SHELL_USING_FUNC_SIGNATURE == 1 */
-
-    #define SHELL_EXPORT_CMD(_attr, _name, _func, _desc)
-#if SHELL_USING_FUNC_SIGNATURE == 1
-    #define SHELL_EXPORT_CMD_SIGN(_attr, _name, _func, _desc, _sign)
-#endif /** SHELL_USING_FUNC_SIGNATURE == 1 */
-    #define SHELL_EXPORT_CMD_AGENCY(_attr, _name, _func, _desc, ...)
-    #define SHELL_EXPORT_VAR(_attr, _name, _value, _desc)
-    #define SHELL_EXPORT_USER(_attr, _name, _password, _desc)
-    #define SHELL_EXPORT_KEY(_attr, _value, _func, _desc)
-    #define SHELL_EXPORT_KEY_AGENCY(_attr, _name, _func, _desc, ...)
-#if SHELL_USING_FUNC_SIGNATURE == 1
-    #define SHELL_EXPORT_PARAM_PARSER(_attr, _type, _parser, _cleaner)
-#endif /** SHELL_USING_FUNC_SIGNATURE == 1 */
-#endif /** SHELL_USING_CMD_EXPORT == 1 */
+/**
+ * @brief shell 代理按键定义
+ *
+ * @param _attr 按键属性
+ * @param _value 按键键值
+ * @param _func 按键函数
+ * @param _desc 按键描述
+ * @param ... 代理参数
+ */
+#define SHELL_EXPORT_KEY_AGENCY(_attr, _value, _func, _desc, ...) \
+    void SHELL_KEY_AGENCY_FUNC_NAME(_func)(Shell * p1)            \
+    {                                                             \
+        (void)p1;                                                 \
+        _func(__VA_ARGS__);                                       \
+    }                                                             \
+    SHELL_EXPORT_KEY(_attr, _value, SHELL_KEY_AGENCY_FUNC_NAME(_func), _desc)
 
 /**
  * @brief shell command类型
  */
 typedef enum
 {
-    SHELL_TYPE_CMD_MAIN = 0,                                    /**< main形式命令 */
-    SHELL_TYPE_CMD_FUNC,                                        /**< C函数形式命令 */
+    SHELL_TYPE_CMD = 0,                                         /**< main形式命令 */
     SHELL_TYPE_VAR_INT,                                         /**< int型变量 */
     SHELL_TYPE_VAR_SHORT,                                       /**< short型变量 */
     SHELL_TYPE_VAR_CHAR,                                        /**< char型变量 */
     SHELL_TYPE_VAR_STRING,                                      /**< string型变量 */
     SHELL_TYPE_VAR_POINT,                                       /**< 指针型变量 */
     SHELL_TYPE_VAR_NODE,                                        /**< 节点变量 */
-    SHELL_TYPE_USER,                                            /**< 用户 */
     SHELL_TYPE_KEY,                                             /**< 按键 */
-#if SHELL_USING_FUNC_SIGNATURE == 1
-    SHELL_TYPE_PARAM_PARSER,                                    /**< 参数解析器 */
-#endif
 } ShellCommandType;
 
 
@@ -407,7 +402,7 @@ typedef struct shell_def
 {
     struct
     {
-        const struct shell_command *user;                       /**< 当前用户 */
+        const struct shell_user *user;                          /**< 当前用户 */
         int activeTime;                                         /**< shell激活时间 */
         char *path;                                             /**< 当前shell路径 */
     #if SHELL_USING_COMPANION == 1
@@ -438,9 +433,14 @@ typedef struct shell_def
 #endif /** SHELL_HISTORY_MAX_NUMBER > 0 */
     struct
     {
-        void *base;                                             /**< 命令表基址 */
+        pCommand base;                                          /**< 命令表基址 */
         unsigned short count;                                   /**< 命令数量 */
     } commandList;
+    struct
+    {
+        pUser base;                                             /**< 用户表基址 */
+        unsigned short count;                                   /**< 用户数量 */
+    } userList;
     struct
     {
         unsigned char isChecked : 1;                            /**< 密码校验通过 */
@@ -480,11 +480,8 @@ typedef struct shell_command
         struct
         {
             const char *name;                                   /**< 命令名 */
-            int (*function)();                                  /**< 命令执行函数 */
             const char *desc;                                   /**< 命令描述 */
-        #if SHELL_USING_FUNC_SIGNATURE == 1
-            const char *signature;                              /**< 函数签名 */
-        #endif
+            shellCompleteCb function;                           /**< 命令执行函数 */
         } cmd;                                                  /**< 命令定义 */
         struct
         {
@@ -494,27 +491,23 @@ typedef struct shell_command
         } var;                                                  /**< 变量定义 */
         struct
         {
-            const char *name;                                   /**< 用户名 */
-            const char *password;                               /**< 用户密码 */
-            const char *desc;                                   /**< 用户描述 */
-        } user;                                                 /**< 用户定义 */
-        struct
-        {
             int value;                                          /**< 按键键值 */
             void (*function)(Shell *);                          /**< 按键执行函数 */
             const char *desc;                                   /**< 按键描述 */
         } key;                                                  /**< 按键定义 */
-#if SHELL_USING_FUNC_SIGNATURE == 1
-        struct
-        {
-            const char *type;                                   /**< 参数类型 */
-            int (*parser)(char *, void **);                     /**< 解析函数 */
-            int (*cleaner)(void *);                             /**< 清理器 */
-        } paramParser;                                          /**< 参数解析器 */
-#endif
     } data;
 } ShellCommand;
 
+/**
+ * @brief shell user定义
+ */
+typedef struct shell_user
+{
+    unsigned char permission;                       /**< command权限 */
+    const char *name;                                   /**< 用户名 */
+    const char *password;                               /**< 用户密码 */
+    const char *desc;                                   /**< 用户描述 */
+} ShellUser;
 /**
  * @brief shell节点变量属性
  */
@@ -534,6 +527,7 @@ typedef struct
 void shellInit(Shell *shell, char *buffer, unsigned short size);
 void shellRemove(Shell *shell);
 unsigned short shellWriteString(Shell *shell, const char *string);
+void shellWriteParamErrMessage(Shell *shell, int err);
 void shellPrint(Shell *shell, const char *fmt, ...);
 void shellScan(Shell *shell, char *fmt, ...);
 Shell* shellGetCurrent(void);

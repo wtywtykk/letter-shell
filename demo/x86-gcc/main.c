@@ -19,13 +19,18 @@ static int demoExit(int value)
     exit(value);
     return value;
 }
-SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_PARAM_NUM(1),
-exit, demoExit, exit);
-SHELL_EXPORT_KEY_AGENCY(SHELL_CMD_PERMISSION(0),
-0x03000000, exit, demoExit, 0);
+
+static int demoExit_noarg(void)
+{
+    demoExit(0);
+}
+SHELL_EXPORT_CMD_SIGN(SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD) | SHELL_CMD_PARAM_NUM(1),
+                      exit, demoExit_noarg, "exit", void);
+SHELL_EXPORT_KEY_AGENCY(SHELL_CMD_PERMISSION(0), 0x03000000, exit, demoExit, 0);
 
 static void signalHandler(int signal)
 {
+    (void)signal;
     demoExit(0);
 }
 

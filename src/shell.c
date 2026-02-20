@@ -1083,7 +1083,8 @@ int shellGetVarValue(Shell *shell, ShellCommand *command)
         value = (size_t)(command->data.var.value);
         break;
     case SHELL_TYPE_VAR_NODE: {
-        int (*func)(void *) = ((ShellNodeVarAttr *)command->data.var.value)->get;
+      int (*func)(void *) =
+          (int (*)(void *))((ShellNodeVarAttr *)command->data.var.value)->get;
         value = func ? func(((ShellNodeVarAttr *)command->data.var.value)->var) : 0;
         break;
     }
@@ -1132,12 +1133,13 @@ int shellSetVarValue(Shell *shell, ShellCommand *command, int value)
             {
                 if (((ShellNodeVarAttr *)command->data.var.value)->var)
                 {
-                    int (*func)(void *, int) = ((ShellNodeVarAttr *)command->data.var.value)->set;
+                    int (*func)(void *, int) = (int (*)(void *, int))((ShellNodeVarAttr *)command->data.var.value)->set;
                     func(((ShellNodeVarAttr *)command->data.var.value)->var, value);
                 }
                 else
                 {
-                    int (*func)(int) = ((ShellNodeVarAttr *)command->data.var.value)->set;
+                  int (*func)(int) = (int (*)(
+                      int))((ShellNodeVarAttr *)command->data.var.value)->set;
                     func(value);
                 }
             }
@@ -1245,7 +1247,8 @@ unsigned int shellRunCommand(Shell *shell, ShellCommand *command)
     if (command->attr.attrs.type == SHELL_TYPE_CMD_MAIN)
     {
         shellRemoveParamQuotes(shell);
-        int (*func)(int, char **) = command->data.cmd.function;
+        int (*func)(int, char **) =
+            (int (*)(int, char **))command->data.cmd.function;
         returnValue = func(shell->parser.paramCount, shell->parser.param);
         if (!command->attr.attrs.disableReturn)
         {

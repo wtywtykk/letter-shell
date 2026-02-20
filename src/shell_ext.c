@@ -693,7 +693,7 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
 #if SHELL_PARAMETER_MAX_NUMBER >= 2
     case 1:
     {
-        int (*func)(size_t) = command->data.cmd.function;
+        int (*func)(size_t) = (int (*)(size_t))command->data.cmd.function;
         ret = func(params[0]);
         break;
     }
@@ -701,7 +701,7 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
 #if SHELL_PARAMETER_MAX_NUMBER >= 3
     case 2:
     {
-        int (*func)(size_t, size_t) = command->data.cmd.function;
+        int (*func)(size_t, size_t) = (int (*)(size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1]);
         break;
     }
@@ -709,7 +709,7 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
 #if SHELL_PARAMETER_MAX_NUMBER >= 4
     case 3:
     {
-        int (*func)(size_t, size_t, size_t) = command->data.cmd.function;
+        int (*func)(size_t, size_t, size_t) = (int (*)(size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2]);
         break;
     }
@@ -717,7 +717,7 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
 #if SHELL_PARAMETER_MAX_NUMBER >= 5
     case 4:
     {
-        int (*func)(size_t, size_t, size_t, size_t) = command->data.cmd.function;
+        int (*func)(size_t, size_t, size_t, size_t) = (int (*)(size_t, size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3]);
         break;
     }
@@ -725,7 +725,7 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
 #if SHELL_PARAMETER_MAX_NUMBER >= 6
     case 5:
     {
-        int (*func)(size_t, size_t, size_t, size_t, size_t) = command->data.cmd.function;
+        int (*func)(size_t, size_t, size_t, size_t, size_t) = (int (*)(size_t, size_t, size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4]);
         break;
     }
@@ -733,7 +733,7 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
 #if SHELL_PARAMETER_MAX_NUMBER >= 7
     case 6:
     {
-        int (*func)(size_t, size_t, size_t, size_t, size_t, size_t) = command->data.cmd.function;
+        int (*func)(size_t, size_t, size_t, size_t, size_t, size_t) = (int (*)(size_t, size_t, size_t, size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4], params[5]);
         break;
     }
@@ -741,7 +741,7 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
 #if SHELL_PARAMETER_MAX_NUMBER >= 8
     case 7:
     {
-        int (*func)(size_t, size_t, size_t, size_t, size_t, size_t, size_t) = command->data.cmd.function;
+        int (*func)(size_t, size_t, size_t, size_t, size_t, size_t, size_t) = (int (*)(size_t, size_t, size_t, size_t, size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4], params[5], params[6]);
         break;
     }
@@ -750,7 +750,7 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
     case 8:
     {
         int (*func)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t)
-            = command->data.cmd.function;
+            = (int (*)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7]);
         break;
     }
@@ -759,7 +759,8 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
     case 9:
     {
         int (*func)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
-                    size_t) = command->data.cmd.function;
+                    size_t) = (int (*)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
+                    size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7],
                    params[8]);
         break;
@@ -769,7 +770,8 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
     case 10:
     {
         int (*func)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
-                    size_t, size_t) = command->data.cmd.function;
+                    size_t, size_t) = (int (*)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
+                    size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7],
                    params[8], params[9]);
         break;
@@ -779,7 +781,8 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
     case 11:
     {
         int (*func)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
-                    size_t, size_t, size_t) = command->data.cmd.function;
+                    size_t, size_t, size_t) = (int (*)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
+                    size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7],
                    params[8], params[9], params[10]);
         break;
@@ -789,7 +792,8 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
     case 12:
     {
         int (*func)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
-                    size_t, size_t, size_t, size_t) = command->data.cmd.function;
+                    size_t, size_t, size_t, size_t) = (int (*)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
+                    size_t, size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7],
                    params[8], params[9], params[10], params[11]);
         break;
@@ -799,7 +803,8 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
     case 13:
     {
         int (*func)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
-                    size_t, size_t, size_t, size_t, size_t) = command->data.cmd.function;
+                    size_t, size_t, size_t, size_t, size_t) = (int (*)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
+                    size_t, size_t, size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7],
                    params[8], params[9], params[10], params[11], params[12]);
         break;
@@ -810,7 +815,8 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
     {
         int (*func)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
                     size_t, size_t, size_t, size_t, size_t, size_t)
-            = command->data.cmd.function;
+            = (int (*)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
+                    size_t, size_t, size_t, size_t, size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7],
                    params[8], params[9], params[10], params[11], params[12], params[13]);
         break;
@@ -821,7 +827,8 @@ int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[])
     {
         int (*func)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
                     size_t, size_t, size_t, size_t, size_t, size_t, size_t)
-            = command->data.cmd.function;
+            = (int (*)(size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t,
+                    size_t, size_t, size_t, size_t, size_t, size_t, size_t, size_t))command->data.cmd.function;
         ret = func(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7],
                    params[8], params[9], params[10], params[11], params[12], params[13], params[14]);
         break;
